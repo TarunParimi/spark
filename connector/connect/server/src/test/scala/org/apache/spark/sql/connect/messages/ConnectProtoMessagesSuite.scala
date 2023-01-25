@@ -20,8 +20,6 @@ import com.google.protobuf.ByteString
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.connect.proto
-import org.apache.spark.sql.connect.common.DataTypeProtoConverter
-import org.apache.spark.sql.types.IntegerType
 
 class ConnectProtoMessagesSuite extends SparkFunSuite {
   test("UserContext can deal with extensions") {
@@ -53,7 +51,7 @@ class ConnectProtoMessagesSuite extends SparkFunSuite {
     assert(extLit.getLiteral.getInteger == 32)
   }
 
-  test("CommonInlineUserDefinedFunction") {
+  test("ScalarInlineUserDefinedFunction") {
     val arguments = proto.Expression
       .newBuilder()
       .setUnresolvedAttribute(
@@ -63,15 +61,14 @@ class ConnectProtoMessagesSuite extends SparkFunSuite {
     val pythonUdf = proto.PythonUDF
       .newBuilder()
       .setEvalType(100)
-      .setOutputType(DataTypeProtoConverter.toConnectProtoType(IntegerType))
+      .setOutputType("\"integer\"")
       .setCommand(ByteString.copyFrom("command".getBytes()))
-      .setPythonVer("3.10")
       .build()
 
-    val commonInlineUserDefinedFunctionExpr = proto.Expression
+    val scalarInlineUserDefinedFunctionExpr = proto.Expression
       .newBuilder()
-      .setCommonInlineUserDefinedFunction(
-        proto.CommonInlineUserDefinedFunction
+      .setScalarInlineUserDefinedFunction(
+        proto.ScalarInlineUserDefinedFunction
           .newBuilder()
           .setFunctionName("f")
           .setDeterministic(true)
@@ -79,11 +76,10 @@ class ConnectProtoMessagesSuite extends SparkFunSuite {
           .setPythonUdf(pythonUdf))
       .build()
 
-    val fun = commonInlineUserDefinedFunctionExpr.getCommonInlineUserDefinedFunction()
+    val fun = scalarInlineUserDefinedFunctionExpr.getScalarInlineUserDefinedFunction()
     assert(fun.getFunctionName == "f")
     assert(fun.getDeterministic == true)
     assert(fun.getArgumentsCount == 1)
     assert(fun.hasPythonUdf == true)
-    assert(pythonUdf.getPythonVer == "3.10")
   }
 }
