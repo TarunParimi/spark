@@ -40,7 +40,7 @@ private[spark] class KubernetesClusterManager extends ExternalClusterManager wit
     conf.get(KUBERNETES_DRIVER_MASTER_URL).startsWith("local")
 
   override def createTaskScheduler(sc: SparkContext, masterURL: String): TaskScheduler = {
-    val maxTaskFailures = sc.conf.get(KUBERNETES_DRIVER_MASTER_URL) match {
+    val maxTaskFailures = masterURL match {
       case "local" | LOCAL_N_REGEX(_) => 1
       case LOCAL_N_FAILURES_REGEX(_, maxFailures) => maxFailures.toInt
       case _ => sc.conf.get(TASK_MAX_FAILURES)
@@ -54,14 +54,13 @@ private[spark] class KubernetesClusterManager extends ExternalClusterManager wit
       scheduler: TaskScheduler): SchedulerBackend = {
     if (isLocal(sc.conf)) {
       def localCpuCount: Int = Runtime.getRuntime.availableProcessors()
-      val threadCount = sc.conf.get(KUBERNETES_DRIVER_MASTER_URL) match {
+      val threadCount = masterURL match {
         case LOCAL_N_REGEX(threads) =>
-          if (threads == "*") localCpuCount else threads.toInt
+          if (threads == "*") localCpuCount else 1
         case LOCAL_N_FAILURES_REGEX(threads, _) =>
-          if (threads == "*") localCpuCount else threads.toInt
+          if (threads == "*") localCpuCount else 1
         case _ => 1
       }
-      logInfo(s"Running Spark with ${sc.conf.get(KUBERNETES_DRIVER_MASTER_URL)}")
       val schedulerImpl = scheduler.asInstanceOf[TaskSchedulerImpl]
       val backend = new LocalSchedulerBackend(sc.conf, schedulerImpl, threadCount)
       schedulerImpl.initialize(backend)
